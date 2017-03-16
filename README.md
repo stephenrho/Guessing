@@ -8,4 +8,4 @@ The scripts in the `analysis` folder do the following:
 * `samlplesExp[1-4].R` uses [JAGS](http://mcmc-jags.sourceforge.net/) to sample from the joint posterior of each model under consideration.
 * `PP_check.R` calculates the overlap between the posterior predictive distribution and the raw data.
 * `guessingFunctions.R` contains miscellaneous functions used in restructuring posterior distributions/ plotting. Some functions are from ([Kruschke, 2015](http://www.indiana.edu/~kruschke/DoingBayesianDataAnalysis/)).
-* `conventional_k.R` conducts a standard analysis of *k* using the models of [Pashler (1988)](https://www.ncbi.nlm.nih.gov/pubmed/3226885) and [Cowan (2001)](https://www.ncbi.nlm.nih.gov/pubmed/11515286).
+* `conventional_k.R` conducts a standard analysis of *k* using the models of [Pashler (1988)](https://www.ncbi.nlm.nih.gov/pubmed/3226885) and [Cowan et al. (2013)](https://www.ncbi.nlm.nih.gov/pubmed/22905929).
