@@ -1,0 +1,56 @@
+
+  model{
+    for (i in 1:n){
+      y[i] ~ dbern(y.hat[i])
+      y.hat[i] <- max(0, min(1, P[i]))
+      
+      # probability of responding change
+      P[i] <- ifelse(CHANGE[i] == 1, 
+                     a[i]*o[i] + (1 - a[i])*u[i], # p(hit)
+                     a[i]*(1 - d[i])*o[i] + (1 - a[i])*u[i]) # p(false-alarm)
+      
+      d[i] <- min(k[i]/N[i], 1)
+      
+      # informed guessing
+      g[i] <- u[i]/(u[i] + (1 - d[i])*(1 - u[i]))
+      
+      # Logit rule
+      o[i] <- 1/(1 + exp(-lambda[i]*log(g[i]/(1 - g[i]))))
+      
+      # model transformations of k, u, and a
+      k[i] <- max(kappa[i], 0) # Mass-at-chance transformation
+      kappa[i] <- Ksubj[id[i]]
+      logit(a[i]) <- Asubj[id[i]]
+      logit(u[i]) <- Usubj[B_level[i], id[i]] # separate u sample for each base rate x participant
+      lambda[i] <- exp(Lsubj[id[i]])
+    }
+    
+    # participant level parameters
+    for (s in 1:S){
+      Ksubj[s] ~ dnorm(K, K_Tau)
+      Asubj[s] ~ dnorm(A, A_Tau)
+      Lsubj[s] ~ dnorm(L, L_Tau)
+      for (l in 1:B_n){
+        Usubj[l, s] ~ dnorm(U[l], U_Tau) # levels share variance
+      }
+    }
+    
+    # hierarchical priors
+    # grand means
+    K ~ dnorm(1, 1/10^2)
+    A ~ dnorm(3, 1/10^2)
+    L ~ dnorm(0, 1/10^2)
+    for (l in 1:B_n){
+      U[l] ~ dnorm(0, 1/10^2)
+    }
+    
+    # standard deviations
+    K_Tau <- 1/pow(K_SD, 2)
+    K_SD ~ dgamma(1.01005, 0.1005012) # mode = .1, SD = 10 (v. vauge)
+    U_Tau <- 1/pow(U_SD, 2)
+    U_SD ~ dgamma(1.01005, 0.1005012)
+    A_Tau <- 1/pow(A_SD, 2)
+    A_SD ~ dgamma(1.01005, 0.1005012)
+    L_Tau <- 1/pow(L_SD, 2)
+    L_SD ~ dgamma(1.01005, 0.1005012)
+  }

@@ -1,0 +1,47 @@
+
+  model{
+    for (i in 1:n){
+      y[i] ~ dbern(y.hat[i])
+      y.hat[i] <- max(0, min(1, P[i]))
+      
+      # probability of responding change
+      P[i] <- ifelse(CHANGE[i] == 1,
+                     ifelse(d[i] == 1, 1 - (1 - a[i])*(1 - u[i]), u[i]), # p(hit)
+                     a[i]*(1 - d[i])*u[i] + (1 - a[i])*u[i]) # p(false-alarm)
+      
+      d[i] <- min(k[i]/N[i], 1)
+
+      # model transformations of k, u, and a
+      k[i] <- max(kappa[i], 0) # Mass-at-chance transformation
+      kappa[i] <- Ksubj[id[i]]
+      logit(a[i]) <- Asubj[id[i]]
+      logit(u[i]) <- Usubj[B_level[i], id[i]] # separate u sample for each base rate x participant
+    }
+    # participant level parameters
+    for (s in 1:S){
+      Ksubj[s] ~ dnorm(K, K_Tau)
+    }
+    for (s in 1:S){
+      Asubj[s] ~ dnorm(A, A_Tau)
+    }
+    for (l in 1:B_n){
+      for (s in 1:S){
+        Usubj[l, s] ~ dnorm(U[l], U_Tau) # levels share variance
+      }
+    }
+    
+    # grand means
+    K ~ dnorm(1, 1/10^2)
+    A ~ dnorm(3, 1/10^2)
+    for (l in 1:B_n){
+      U[l] ~ dnorm(0, 1/10^2)
+    }
+    
+    # standard deviations
+    K_Tau <- 1/pow(K_SD, 2)
+    K_SD ~ dgamma(1.01005, 0.1005012) # mode = .1, SD = 10 (v. vauge)
+    U_Tau <- 1/pow(U_SD, 2)
+    U_SD ~ dgamma(1.01005, 0.1005012)
+    A_Tau <- 1/pow(A_SD, 2)
+    A_SD ~ dgamma(1.01005, 0.1005012)
+  }

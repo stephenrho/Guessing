@@ -1,0 +1,34 @@
+
+  model{
+  # estimate hit and false alarm rates for experiments 1, 2, 3, and 4
+    for (i in 1:n){
+      y[i] ~ dbern(y.hat[i])
+      y.hat[i] <- max(0, min(1, P[i]))
+      
+      logit(P[i]) <- Rsubj[testLevel[i], condLevel[i], ssLevel[i], id[i]] # freely estimate rates for each condition (with shrinkage)
+    }
+
+    # participant level parameters
+    for (t in 1:2){ # same, change
+      for (l in 1:N_c){ # condition (base rate manipulation or number of changes)
+        for (ss in 1:N_ss){ # set sizes
+          for (s in 1:S){
+            Rsubj[t,l,ss,s] ~ dnorm(R[t,l,ss], R_Tau)
+          }
+        }
+      }
+    }
+
+    # hierarchical priors
+    # prior for means
+    for (t in 1:2){
+      for (l in 1:N_c){
+        for (ss in 1:N_ss){
+          R[t,l,ss] ~ dnorm(0, 1/10^2)
+        }
+      }
+    }
+    # standard deviations
+    R_Tau <- 1/pow(R_SD, 2)
+    R_SD ~ dgamma(1.01005, 0.1005012)
+  }
