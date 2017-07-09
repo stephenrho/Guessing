@@ -1,7 +1,8 @@
 
   model{
     for (i in 1:n){
-      y[i] ~ dbern(y.hat[i])
+      #y[i] ~ dbern(y.hat[i])
+      y[i] ~ dbin(y.hat[i], N_trials[i])
       y.hat[i] <- max(0, min(1, P[i]))
       
       # probability of responding change
@@ -38,7 +39,7 @@
 
     # hierarchical priors
     # grand means
-    K ~ dnorm(1, 1/10^2)
+    K ~ dnorm(3, 1/10^2)
     A ~ dnorm(3, 1/10^2)
     L ~ dnorm(0, 1/10^2)
     for (l in 1:B_n){

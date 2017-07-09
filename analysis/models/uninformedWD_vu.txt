@@ -7,22 +7,18 @@
       
       # probability of responding change
       P[i] <- ifelse(CHANGE[i] == 1, 
-                     a[i]*(d[i] + (1 - d[i])*g[i]) + (1 - a[i])*u[i], # p(hit)
-                     a[i]*g[i] + (1 - a[i])*u[i]) # p(false-alarm)
+                     a[i]*(d[i] + (1 - d[i])*u[i]) + (1 - a[i])*u[i], # p(hit)
+                     ifelse(d[i] == 1, (1 - a[i])*u[i], u[i])) # p(false-alarm)
       
       ## log factorial method for implementing choose function
       d[i] <- ifelse(k[i] >= N[i] - C[i] + 1, 1, 1 - exp(logfact(N[i] - k[i]) - (logfact(C[i]) + logfact(N[i] - k[i] - C[i]))) / exp(logfact(N[i]) - (logfact(C[i]) + logfact(N[i] - C[i]))))
-      
-      # informed guessing
-      g[i] <- ((1 - d[i])*u[i])/ ((1 - d[i])*u[i] + (1 - u[i]))
       
       # model transformations of k, u, and a
       k[i] <- max(kappa[i], 0) # Mass-at-chance transformation
       kappa[i] <- Ksubj[id[i]]
       logit(a[i]) <- Asubj[id[i]]
-      logit(u[i]) <- Usubj[B_level[i], id[i]] # separate u sample for each base rate x participant
+      logit(u[i]) <- Usubj[ssLevel[i], B_level[i], id[i]] # separate u sample for each set size x base rate x participant
     }
-    
     # participant level parameters
     for (s in 1:S){
       Ksubj[s] ~ dnorm(K, K_Tau)
@@ -30,20 +26,23 @@
     for (s in 1:S){
       Asubj[s] ~ dnorm(A, A_Tau)
     }
-    for (l in 1:B_n){
-      for (s in 1:S){
-        Usubj[l, s] ~ dnorm(U[l], U_Tau) # levels share variance
+    for (ss in 1:N_ss){
+      for (l in 1:B_n){
+        for (s in 1:S){
+          Usubj[ss, l, s] ~ dnorm(U[ss, l], U_Tau) # levels share variance
+        }
       }
     }
-    
-    # hierarchical priors
+
     # grand means
     K ~ dnorm(3, 1/10^2)
     A ~ dnorm(3, 1/10^2)
-    for (l in 1:B_n){
-      U[l] ~ dnorm(0, 1/10^2)
+    for (ss in 1:N_ss){
+      for (l in 1:B_n){
+        U[ss, l] ~ dnorm(0, 1/10^2)
+      }
     }
-    
+
     # standard deviations
     K_Tau <- 1/pow(K_SD, 2)
     K_SD ~ dgamma(1.01005, 0.1005012) # mode = .1, SD = 10 (v. vauge)

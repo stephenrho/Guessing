@@ -1,7 +1,8 @@
 
   model{
     for (i in 1:n){
-      y[i] ~ dbern(y.hat[i])
+      #y[i] ~ dbern(y.hat[i])
+      y[i] ~ dbin(y.hat[i], N_trials[i])
       y.hat[i] <- max(0, min(1, P[i]))
       
       # probability of responding change
@@ -38,8 +39,10 @@
     
     # hierarchical priors
     # grand means
-    for (ss in 1:N_ss){
-      K[ss] ~ dnorm(1, 1/10^2)
+    K[1] ~ dnorm(3, 1/K1_sd^2) # to stabilize estimate at SS2 allow SD to be specified
+
+    for (ss in 2:N_ss){
+      K[ss] ~ dnorm(3, 1/10^2)
     }
     A ~ dnorm(3, 1/10^2)
     for (l in 1:B_n){

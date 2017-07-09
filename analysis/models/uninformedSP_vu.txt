@@ -14,34 +14,32 @@
       
       # model transformations of k, u, and a
       k[i] <- max(kappa[i], 0) # Mass-at-chance transformation
-      kappa[i] <- Ksubj[ssLevel[i], id[i]]
+      kappa[i] <- Ksubj[id[i]]
       logit(a[i]) <- Asubj[id[i]]
-      logit(u[i]) <- Usubj[B_level[i], id[i]] # separate u sample for each base rate x participant
+      logit(u[i]) <- Usubj[ssLevel[i], B_level[i], id[i]] # separate u sample for each set size x base rate x participant
     }
     # participant level parameters
-    for (ss in 1:N_ss){
-      for (s in 1:S){
-        Ksubj[ss, s] ~ dnorm(K[ss], K_Tau)
-      }
+    for (s in 1:S){
+      Ksubj[s] ~ dnorm(K, K_Tau)
     }
     for (s in 1:S){
       Asubj[s] ~ dnorm(A, A_Tau)
     }
-    for (l in 1:B_n){
-      for (s in 1:S){
-        Usubj[l, s] ~ dnorm(U[l], U_Tau) # levels share variance
+    for (ss in 1:N_ss){
+      for (l in 1:B_n){
+        for (s in 1:S){
+          Usubj[ss, l, s] ~ dnorm(U[ss, l], U_Tau) # levels share variance
+        }
       }
     }
-    
-    # grand means
-    K[1] ~ dnorm(3, 1/K1_sd^2) # to stabilize estimate at SS2 allow SD to be specified
 
-    for (ss in 2:N_ss){
-      K[ss] ~ dnorm(3, 1/10^2)
-    }
+    # grand means
+    K ~ dnorm(3, 1/10^2)
     A ~ dnorm(3, 1/10^2)
-    for (l in 1:B_n){
-      U[l] ~ dnorm(0, 1/10^2)
+    for (ss in 1:N_ss){
+      for (l in 1:B_n){
+        U[ss, l] ~ dnorm(0, 1/10^2)
+      }
     }
     
     # standard deviations

@@ -2,7 +2,8 @@
   model{
   # estimate hit and false alarm rates for experiments 1, 2, 3, and 4
     for (i in 1:n){
-      y[i] ~ dbern(y.hat[i])
+      #y[i] ~ dbern(y.hat[i])
+      y[i] ~ dbin(y.hat[i], N_trials[i])
       y.hat[i] <- max(0, min(1, P[i]))
       
       logit(P[i]) <- Rsubj[testLevel[i], condLevel[i], ssLevel[i], id[i]] # freely estimate rates for each condition (with shrinkage)
