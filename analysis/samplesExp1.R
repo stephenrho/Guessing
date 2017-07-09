@@ -9,80 +9,76 @@ library(plyr)
 library(rjags)
 library(R2jags)
 
-# READ DATA AND MODELS ----------------------------------------------------
+# READ DATA AND FUNCTIONS ----------------------------------------------------
 setwd('analysis/')
 
-exp1 <- read.table(file = 'data/exp1/exp1_full')
-exp1$Cond <- as.factor(exp1$Cond)
+load('guessingDataLists.RData')
 
-# STRUCTURE DATA EXP 1 -----------------------------------------------------
-DATALIST_EXP1 <- list(
-  y = exp1$respChange,
-  CHANGE = exp1$testChange,
-  C = rep(1, nrow(exp1)),
-  B_level = as.numeric(exp1$Cond),
-  B_n = length(unique(exp1$Cond)),
-  N = exp1$SetSize,
-  S = length(unique(exp1$ppt)),
-  id = exp1$ppt,
-  n = nrow(exp1),
-  # for data model
-  condLevel = as.numeric(exp1$Cond),
-  N_c = length(unique(exp1$Cond)),
-  ssLevel = as.numeric(as.factor(exp1$SetSize)),
-  N_ss = length(unique(exp1$SetSize)),
-  testLevel = as.numeric(as.factor(exp1$testChange))
-)
+source('guessingFunctions.R')
 
 # RUN CHAINS EXP 1 --------------------------------------------------------
 
 # DATA MODEL
-params <- c('R', 'R_SD')
+params <- c('R', 'R_SD', 'Rsubj')
 
-dataM.samplesE1 <- jags.parallel(data = DATALIST_EXP1, inits = NULL, parameters.to.save = params, model.file = "models/dataModel.txt", n.chains = 5, n.iter = 15000, n.burnin = 5000, n.thin = 1)
+dataM.samplesE1 <- jags.parallel(data = DATALIST_EXP1, inits = NULL, parameters.to.save = params, model.file = "models/dataModel.txt", n.chains = 4, n.iter = 10000, n.burnin = 5000, n.thin = 1)
 
-all(as.data.frame(dataM.samplesE1$BUGSoutput$summary)$Rhat < 1.1)
+dataM.summaryE1 = as.data.frame(dataM.samplesE1$BUGSoutput$summary)
+dataM.summaryE1[dataM.summaryE1$Rhat>1.1,]
 
 # INFORMED
-params <- c('K', 'A', 'U', 'K_SD', 'A_SD', 'U_SD') 
+params <- c('K', 'A', 'U', 'K_SD', 'A_SD', 'U_SD', 'Ksubj', 'Asubj', 'Usubj') 
 
-inf.samplesE1 <- jags.parallel(data = DATALIST_EXP1, inits = NULL, parameters.to.save = params, model.file = "models/informedWD.txt", n.chains = 5, n.iter = 15000, n.burnin = 5000, n.thin = 1)
+inf.samplesE1 <- jags.parallel(data = DATALIST_EXP1, inits = k_initFunc1, parameters.to.save = params, model.file = "models/informedWD.txt", n.chains = 4, n.iter = 55000, n.burnin = 5000, n.thin = 10)
 
-all(as.data.frame(inf.samplesE1$BUGSoutput$summary)$Rhat < 1.1)
+inf.summaryE1 = as.data.frame(inf.samplesE1$BUGSoutput$summary)
+inf.summaryE1[inf.summaryE1$Rhat>1.1,]
 
 # variable k
-inf_vk.samplesE1 <- jags.parallel(data = DATALIST_EXP1, inits = NULL, parameters.to.save = params, model.file = "models/informedWD_vk.txt", n.chains = 5, n.iter = 15000, n.burnin = 5000, n.thin = 1)
+DATALIST_EXP1['K1_sd'] = .1 # without prior constraint K[1] is unstable
+inf_vk.samplesE1 <- jags.parallel(data = DATALIST_EXP1, inits = k_initFunc3, parameters.to.save = params, model.file = "models/informedWD_vk.txt", n.chains = 4, n.iter = 10000, n.burnin = 5000, n.thin = 1)
 
-all(as.data.frame(inf_vk.samplesE1$BUGSoutput$summary)$Rhat < 1.1)
-# K[1] is unstable. Increasing iterations will not solve
+inf_vk.summaryE1 = as.data.frame(inf_vk.samplesE1$BUGSoutput$summary)
+inf_vk.summaryE1[inf_vk.summaryE1$Rhat>1.1,]
 
 # UNINFORMED
-uninf.samplesE1 <- jags.parallel(data = DATALIST_EXP1, inits = NULL, parameters.to.save = params, model.file = "models/uninformedWD.txt", n.chains = 5, n.iter = 55000, n.burnin = 5000, n.thin = 5)
+uninf.samplesE1 <- jags.parallel(data = DATALIST_EXP1, inits = k_initFunc1, parameters.to.save = params, model.file = "models/uninformedWD.txt", n.chains = 4, n.iter = 105000, n.burnin = 5000, n.thin = 20)
 # additional iterations and thinning run to converge
 
-all(as.data.frame(uninf.samplesE1$BUGSoutput$summary)$Rhat < 1.1)
+uninf.summaryE1 = as.data.frame(uninf.samplesE1$BUGSoutput$summary)
+uninf.summaryE1[uninf.summaryE1$Rhat>1.1,]
 
 # variable k
-uninf_vk.samplesE1 <- jags.parallel(data = DATALIST_EXP1, inits = NULL, parameters.to.save = params, model.file = "models/uninformedWD_vk.txt", n.chains = 5, n.iter = 15000, n.burnin = 5000, n.thin = 1)
+uninf_vk.samplesE1 <- jags.parallel(data = DATALIST_EXP1, inits = k_initFunc3, parameters.to.save = params, model.file = "models/uninformedWD_vk2.txt", n.chains = 4, n.iter = 10000, n.burnin = 5000, n.thin = 1)
 
-all(as.data.frame(uninf_vk.samplesE1$BUGSoutput$summary)$Rhat < 1.1)
+uninf_vk.summaryE1 = as.data.frame(uninf_vk.samplesE1$BUGSoutput$summary)
+uninf_vk.summaryE1[uninf_vk.summaryE1$Rhat>1.1,]
 
 # MIXTURE
-params <- c('K', 'A', 'U', 'POG', 'K_SD', 'A_SD', 'U_SD', 'POG_SD', 'P_og_subj')
+params <- c('K', 'A', 'U', 'POG', 'K_SD', 'A_SD', 'U_SD', 'POG_SD', 'Ksubj', 'Asubj', 'Usubj', 'P_og_subj')
 
-mixture.samplesE1 <- jags.parallel(data = DATALIST_EXP1, inits = NULL, parameters.to.save = params, model.file = "models/mixtureWD.txt", n.chains = 5, n.iter = 15000, n.burnin = 5000, n.thin = 1)
+mixture.samplesE1 <- jags.parallel(data = DATALIST_EXP1, inits = k_initFunc1, parameters.to.save = params, model.file = "models/mixtureWD.txt", n.chains = 4, n.iter = 10000, n.burnin = 5000, n.thin = 1)
 
-all(as.data.frame(mixture.samplesE1$BUGSoutput$summary)$Rhat < 1.1)
+mixture.summaryE1 = as.data.frame(mixture.samplesE1$BUGSoutput$summary)
+mixture.summaryE1[mixture.summaryE1$Rhat>1.1,]
 
 # logistic RULE
-params <- c('K', 'A', 'U', 'L', 'K_SD', 'A_SD', 'U_SD', 'L_SD', 'Lsubj')
+params <- c('K', 'A', 'U', 'L', 'K_SD', 'A_SD', 'U_SD', 'L_SD', 'Ksubj', 'Asubj', 'Usubj', 'Lsubj')
 
-logistic.samplesE1 <- jags.parallel(data = DATALIST_EXP1, inits = NULL, parameters.to.save = params, model.file = "models/logisticWD.txt", n.chains = 5, n.iter = 15000, n.burnin = 5000, n.thin = 1)
+logistic.samplesE1 <- jags.parallel(data = DATALIST_EXP1, inits = k_initFunc1, parameters.to.save = params, model.file = "models/logisticWD.txt", n.chains = 4, n.iter = 10000, n.burnin = 5000, n.thin = 1)
 
-all(as.data.frame(logistic.samplesE1$BUGSoutput$summary)$Rhat < 1.1)
+logistic.summaryE1 = as.data.frame(logistic.samplesE1$BUGSoutput$summary)
+logistic.summaryE1[logistic.summaryE1$Rhat>1.1,]
+
+# Allow u to vary by set size and condition
+params <- c('K', 'A', 'U', 'K_SD', 'A_SD', 'U_SD')
+
+uninf_vu.samplesE1 <- jags.parallel(data = DATALIST_EXP1, inits = k_initFunc1, parameters.to.save = params, model.file = "models/uninformedWD_vu.txt", n.chains = 4, n.iter = 105000, n.burnin = 5000, n.thin = 20)
+
+uninf_vu.summaryE1 = as.data.frame(uninf_vu.samplesE1$BUGSoutput$summary)
+uninf_vu.summaryE1[uninf_vu.summaryE1$Rhat>1.1,]
 
 # EXTRACT POSTERIOR --------------------------------------------------------
-source('guessingFunctions.R')
 
 dataM.mcmcE1 <- as.matrix(as.mcmc(dataM.samplesE1))
 inf.mcmcE1 <- as.matrix(as.mcmc(inf.samplesE1))
@@ -144,5 +140,4 @@ logistic.postE1 <- cbind(logistic.mcmcE1[,'K'],
 logistic_o.postE1 <- exp(logistic.mcmcE1[,paste0('Lsubj[', 1:DATALIST_EXP1$S , ']')])
 logistic_o.postE1 <- cbind(apply(logistic_o.postE1, 2, median), t(apply(logistic_o.postE1, 2, HDIofMCMC)))
 
-dir.create('posteriors/')
 save(list = c(ls(pattern = 'samplesE1'), ls(pattern = 'postE1')), file = 'posteriors/posteriorsExp1.RData')

@@ -1,4 +1,4 @@
-# functions use in the analysis and write up of
+#### FUNCTIONS USED DURING ANALYSIS AND WRITE UP
 # Rhodes et al. - Informed Guessing in Change Detection
 # Author: Stephen Rhodes (rhodessp at missouri.edu)
 # License: GNU GPL v3.0
@@ -65,6 +65,39 @@ informed_1 <- function(k,a,u,n){
   return(p)
 }
 
+mixture_1 <- function(k,a,u,n,P_og){
+  
+  d = min(k/n, 1)
+  
+  g_i = ((1 - d)*u)/((1 - d)*u + (1 - u))
+  g_o = ifelse(g_i == 0.5, 0.5, ifelse(g_i > 0.5, 1, 0))
+  
+  lambda <- (P_og*g_o + (1 - P_og)*g_i)
+  
+  p = 1:4
+  p[1] = a*(d + (1 - d)*lambda) + (1 - a)*u
+  p[2] = 1 - p[1]
+  p[3] = ifelse(d == 1, (1 - a)*u, a*lambda + (1 - a)*u)
+  p[4] = 1 - p[3]
+  return(p)
+}
+
+logistic_1 <- function(k,a,u,n,l){
+  
+  d = min(k/n, 1)
+  
+  g <- ((1 - d)*u)/ ((1 - d)*u + (1 - u))
+  
+  o <- 1/(1 + exp(-l*log(g/(1 - g))))
+  
+  p = 1:4
+  p[1] = a*(d + (1 - d)*o) + (1 - a)*u
+  p[2] = 1 - p[1]
+  p[3] = a*o + (1 - a)*u
+  p[4] = 1 - p[3]
+  return(p)
+}
+
 # use the above functions to generate (f,h) points for each posterior sample
 genPredsInformedExp1 <- function(k, a, u, long=F){
   Ns = c(2, 5, 8); Ps = c(0.3, 0.5, 0.7)
@@ -86,7 +119,7 @@ genPredsInformedExp1 <- function(k, a, u, long=F){
   }
 }
 
-genPredsUninformedExp1 <- function(k, a, u){
+genPredsUninformedExp1 <- function(k, a, u, long=F){
   Ns = c(2, 5, 8); Ps = c(0.3, 0.5, 0.7)
   tmp <- c()
   for (p in 1:length(Ps)){
@@ -95,7 +128,15 @@ genPredsUninformedExp1 <- function(k, a, u){
       tmp <- rbind(tmp, c(N = Ns[n], P = Ps[p], f = fh[1], h = fh[2]))
     }
   }
-  return(tmp)
+  if (long){
+    tmp2 <- cbind(rep(c(2,5,8), each = 2*3), rep(c(.3,.5,.7), each = 2), rep(c(0,1)), rep(0))
+    for (r in 1:nrow(tmp2)){
+      tmp2[r,4] <- tmp[tmp[,'N'] == tmp2[r,1] & tmp[,'P'] == tmp2[r,2], 3+tmp2[r,3]]
+    }
+    return(tmp2)
+  } else{
+    return(tmp)
+  }
 }
 
 #### EXPERIMENT 2 -----
@@ -160,6 +201,39 @@ informed_2 <- function(k,a,u,n,nc){
   return(p)
 }
 
+mixture_2 <- function(k,a,u,n,nc,P_og){
+  
+  d = ifelse(k >= n - nc + 1, 1, 1 - choose(n - k, nc)/choose(n, nc))
+  
+  g_i = ((1 - d)*u)/((1 - d)*u + (1 - u))
+  g_o = ifelse(g_i == 0.5, 0.5, ifelse(g_i > 0.5, 1, 0))
+  
+  lambda <- (P_og*g_o + (1 - P_og)*g_i)
+  
+  p = 1:4
+  p[1] = a*(d + (1 - d)*lambda) + (1 - a)*u
+  p[2] = 1 - p[1]
+  p[3] = ifelse(d == 1, (1 - a)*u, a*lambda + (1 - a)*u)
+  p[4] = 1 - p[3]
+  return(p)
+}
+
+logistic_2 <- function(k,a,u,n,nc,l){
+  
+  d = ifelse(k >= n - nc + 1, 1, 1 - choose(n - k, nc)/choose(n, nc))
+  
+  g <- ((1 - d)*u)/ ((1 - d)*u + (1 - u))
+  
+  o <- 1/(1 + exp(-l*log(g/(1 - g))))
+  
+  p = 1:4
+  p[1] = a*(d + (1 - d)*o) + (1 - a)*u
+  p[2] = 1 - p[1]
+  p[3] = a*o + (1 - a)*u
+  p[4] = 1 - p[3]
+  return(p)
+}
+
 # Generate predictions for specific versions of the models
 
 genPredsInformedExp2 <- function(k, a, u, long=F){
@@ -182,7 +256,7 @@ genPredsInformedExp2 <- function(k, a, u, long=F){
   }
 }
 
-genPredsUninformedExp2 <- function(k, a, u){
+genPredsUninformedExp2 <- function(k, a, u, long=F){
   Ns = c(5, 8); Cs = 1:4
   tmp <- c()
   for (n in 1:length(Ns)){
@@ -191,7 +265,15 @@ genPredsUninformedExp2 <- function(k, a, u){
       tmp <- rbind(tmp, c(N = Ns[n], C = Cs[nc], f = fh[1], h = fh[2]))
     }
   }
-  return(tmp)
+  if (long){
+    tmp2 <- cbind(rep(c(5,8), each = 2*4), rep(1:4, each = 2), rep(c(0,1)), rep(0))
+    for (r in 1:nrow(tmp2)){
+      tmp2[r,4] <- tmp[tmp[,'N'] == tmp2[r,1] & tmp[,'C'] == tmp2[r,2], 3+tmp2[r,3]]
+    }
+    return(tmp2)
+  } else{
+    return(tmp)
+  }
 }
 
 #### EXPERIMENT 3 -----
@@ -256,6 +338,39 @@ informed_3 <- function(k,a,u,n){
   return(p)
 }
 
+mixture_3 <- function(k,a,u,n,P_og){
+  
+  d = min(k/n, 1)
+  
+  g_i =  u/(u + (1 - d)*(1 - u))
+  g_o = ifelse(g_i == 0.5, 0.5, ifelse(g_i > 0.5, 1, 0))
+  
+  lambda <- (P_og*g_o + (1 - P_og)*g_i)
+  
+  p = 1:4
+  p[1] = ifelse(d==1, a + (1-a)*u, a*lambda + (1-a)*u)
+  p[2] = 1 - p[1]
+  p[3] = a*(1 - d)*lambda + (1 - a)*u
+  p[4] = 1 - p[3]
+  return(p)
+}
+
+logistic_3 <- function(k,a,u,n,l){
+  
+  d = min(k/n, 1)
+  
+  g <- u/(u + (1 - d)*(1 - u))
+  
+  o <- 1/(1 + exp(-l*log(g/(1 - g))))
+  
+  p = 1:4
+  p[1] = a*o + (1 - a)*u
+  p[2] = 1 - p[1]
+  p[3] = a*(1 - d)*o + (1 - a)*u
+  p[4] = 1 - p[3]
+  return(p)
+}
+
 # use the above generic models to generate predictions with specific parameters
 genPredsInformedExp3 <- function(k, a, u, long=F){
   Ns = c(2, 5, 8); Ps = c(0.3, 0.5, 0.7)
@@ -277,7 +392,7 @@ genPredsInformedExp3 <- function(k, a, u, long=F){
   }
 }
 
-genPredsUninformedExp3 <- function(k, a, u){
+genPredsUninformedExp3 <- function(k, a, u, long=F){
   Ns = c(2, 5, 8); Ps = c(0.3, 0.5, 0.7)
   tmp <- c()
   for (p in 1:length(Ps)){
@@ -286,7 +401,15 @@ genPredsUninformedExp3 <- function(k, a, u){
       tmp <- rbind(tmp, c(N = Ns[n], P = Ps[p], f = fh[1], h = fh[2]))
     }
   }
-  return(tmp)
+  if (long){
+    tmp2 <- cbind(rep(c(2,5,8), each = 2*3), rep(c(.3,.5,.7), each = 2), rep(c(0,1)), rep(0))
+    for (r in 1:nrow(tmp2)){
+      tmp2[r,4] <- tmp[tmp[,'N'] == tmp2[r,1] & tmp[,'P'] == tmp2[r,2], 3+tmp2[r,3]]
+    }
+    return(tmp2)
+  } else{
+    return(tmp)
+  }
 }
 
 #### EXPERIMENT 4 -----
@@ -324,11 +447,11 @@ plotDataM_4 <- function(add = T, errWidth = .01){
   } 
 }
 
-# other functions for experiment 4 are the same as 3
+# other functions same as 3
 
 #### OTHER USEFUL FUNCTIONS -----
 HDIofMCMC = function( sampleVec , credMass=0.95 ) {
-  # from Kruschke (2015) http://www.indiana.edu/~kruschke/DoingBayesianDataAnalysis/
+  # from Kruschke (2015)
   sortedPts = sort( sampleVec )
   ciIdxInc = floor( credMass * length( sortedPts ) )
   nCIs = length( sortedPts ) - ciIdxInc
@@ -346,7 +469,7 @@ logistic <- function(x){
   1/(1 + exp(-x))
 }
 
-faintCol <- function(colLabs, alpha = 30){
+faintCol <- function(colLabs, alpha = 10){
   colVec = c()
   for (i in colLabs){
     RGB = col2rgb(i)
@@ -361,6 +484,34 @@ printD <- function(num, decP){
   sprintf(fmt = paste0('%.', decP, 'f'), num)
 }
 
-getDIC <- function(samples){
-  get(deparse(substitute(samples)))$BUGSoutput$DIC
+getDIC <- function(samples, pD = F){
+  dic = get(deparse(substitute(samples)))$BUGSoutput$DIC
+  pd = get(deparse(substitute(samples)))$BUGSoutput$pD
+  if (!pD){
+    return(dic)
+  } else{
+    return(c(dic, pd))
+  }
 }
+
+k_initFunc1 = function(){
+  list('K' = runif(1, 0, 1))
+       
+}
+
+k_initFunc2 = function(){
+  initList = list()
+  for (i in 1:2){
+    initList[paste0('K[', i, ']')] = runif(1, 0, 1)
+  }
+  return(initList)
+}
+
+k_initFunc3 = function(){
+  initList = list()
+  for (i in 1:3){
+    initList[paste0('K[', i, ']')] = runif(1, 0, 1)
+  }
+  return(initList)
+}
+

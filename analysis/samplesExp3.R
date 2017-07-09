@@ -9,76 +9,73 @@ library(plyr)
 library(rjags)
 library(R2jags)
 
-# READ DATA AND MODELS ----------------------------------------------------
+# READ DATA AND FUNCTIONS ----------------------------------------------------
 setwd('analysis/')
 
-exp3 <- read.table(file = 'data/exp3/exp3_full')
-exp3$Cond <- as.factor(exp3$Cond)
+load('guessingDataLists.RData')
 
-# STRUCTURE DATA EXP 1 -----------------------------------------------------
-DATALIST_EXP3 <- list(
-  y = exp3$respChange,
-  CHANGE = exp3$testChange,
-  B_level = as.numeric(exp3$Cond),
-  B_n = length(unique(exp3$Cond)),
-  N = exp3$SetSize,
-  S = length(unique(exp3$ppt)),
-  id = exp3$ppt,
-  n = nrow(exp3),
-  # for data model
-  condLevel = as.numeric(exp3$Cond),
-  N_c = length(unique(exp3$Cond)),
-  ssLevel = as.numeric(as.factor(exp3$SetSize)),
-  N_ss = length(unique(exp3$SetSize)),
-  testLevel = as.numeric(as.factor(exp3$testChange))
-)
+source('guessingFunctions.R')
 
 # RUN CHAINS EXP 3 --------------------------------------------------------
 
 # DATA MODEL
-params <- c('R', 'R_SD')
+params <- c('R', 'R_SD', 'Rsubj')
 
-dataM.samplesE3 <- jags.parallel(data = DATALIST_EXP3, inits = NULL, parameters.to.save = params, model.file = "models/dataModel.txt", n.chains = 5, n.iter = 15000, n.burnin = 5000, n.thin = 1)
+dataM.samplesE3 <- jags.parallel(data = DATALIST_EXP3, inits = NULL, parameters.to.save = params, model.file = "models/dataModel.txt", n.chains = 4, n.iter = 10000, n.burnin = 5000, n.thin = 1)
 
-all(as.data.frame(dataM.samplesE3$BUGSoutput$summary)$Rhat < 1.1)
+dataM.summaryE3 = as.data.frame(dataM.samplesE3$BUGSoutput$summary)
+dataM.summaryE3[dataM.summaryE3$Rhat>1.1,]
 
 # INFORMED
-params <- c('K', 'A', 'U', 'K_SD', 'A_SD', 'U_SD') 
+params <- c('K', 'A', 'U', 'K_SD', 'A_SD', 'U_SD', 'Ksubj', 'Asubj', 'Usubj') 
 
-inf.samplesE3 <- jags.parallel(data = DATALIST_EXP3, inits = NULL, parameters.to.save = params, model.file = "models/informedSP.txt", n.chains = 5, n.iter = 15000, n.burnin = 5000, n.thin = 1)
+inf.samplesE3 <- jags.parallel(data = DATALIST_EXP3, inits = NULL, parameters.to.save = params, model.file = "models/informedSP.txt", n.chains = 4, n.iter = 10000, n.burnin = 5000, n.thin = 1)
 
-all(as.data.frame(inf.samplesE3$BUGSoutput$summary)$Rhat < 1.1)
+inf.summaryE3 = as.data.frame(inf.samplesE3$BUGSoutput$summary)
+inf.summaryE3[inf.summaryE3$Rhat>1.1,]
 
-inf_vk.samplesE3 <- jags.parallel(data = DATALIST_EXP3, inits = NULL, parameters.to.save = params, model.file = "models/informedSP_vk.txt", n.chains = 5, n.iter = 15000, n.burnin = 5000, n.thin = 1)
+DATALIST_EXP3['K1_sd'] = .1 # without prior constraint K[1] is unstable
+inf_vk.samplesE3 <- jags.parallel(data = DATALIST_EXP3, inits = NULL, parameters.to.save = params, model.file = "models/informedSP_vk.txt", n.chains = 4, n.iter = 10000, n.burnin = 5000, n.thin = 1)
 
-all(as.data.frame(inf_vk.samplesE3$BUGSoutput$summary)$Rhat < 1.1)
-# K[1] is unstable. Increasing iterations will not solve
+inf_vk.summaryE3 = as.data.frame(inf_vk.samplesE3$BUGSoutput$summary)
+inf_vk.summaryE3[inf_vk.summaryE3$Rhat>1.1,]
 
 # UNINFORMED
-uninf.samplesE3 <- jags.parallel(data = DATALIST_EXP3, inits = NULL, parameters.to.save = params, model.file = "models/uninformedSP.txt", n.chains = 5, n.iter = 55000*2, n.burnin = 5000, n.thin = 5*2)
+uninf.samplesE3 <- jags.parallel(data = DATALIST_EXP3, inits = NULL, parameters.to.save = params, model.file = "models/uninformedSP.txt", n.chains = 4, n.iter = 145000, n.burnin = 5000, n.thin = 30)
 
-all(as.data.frame(uninf.samplesE3$BUGSoutput$summary)$Rhat < 1.1)
+uninf.summaryE3 = as.data.frame(uninf.samplesE3$BUGSoutput$summary)
+uninf.summaryE3[uninf.summaryE3$Rhat>1.1,]
 
-uninf_vk.samplesE3 <- jags.parallel(data = DATALIST_EXP3, inits = NULL, parameters.to.save = params, model.file = "models/uninformedSP_vk.txt", n.chains = 5, n.iter = 15000, n.burnin = 5000, n.thin = 1)
+uninf_vk.samplesE3 <- jags.parallel(data = DATALIST_EXP3, inits = NULL, parameters.to.save = params, model.file = "models/uninformedSP_vk.txt", n.chains = 4, n.iter = 10000, n.burnin = 5000, n.thin = 1)
 
-all(as.data.frame(uninf_vk.samplesE3$BUGSoutput$summary)$Rhat < 1.1)
+uninf_vk.summaryE3 = as.data.frame(uninf_vk.samplesE3$BUGSoutput$summary)
+uninf_vk.summaryE3[uninf_vk.summaryE3$Rhat>1.1,]
 
 # MIXTURE
-params <- c('K', 'A', 'U', 'POG', 'K_SD', 'A_SD', 'U_SD', 'POG_SD', 'P_og_subj')
+params <- c('K', 'A', 'U', 'POG', 'K_SD', 'A_SD', 'U_SD', 'POG_SD', 'Ksubj', 'Asubj', 'Usubj', 'P_og_subj')
 
-mixture.samplesE3 <- jags.parallel(data = DATALIST_EXP3, inits = NULL, parameters.to.save = params, model.file = "models/mixtureSP.txt", n.chains = 5, n.iter = 55000, n.burnin = 5000, n.thin = 5)
+mixture.samplesE3 <- jags.parallel(data = DATALIST_EXP3, inits = NULL, parameters.to.save = params, model.file = "models/mixtureSP.txt", n.chains = 4, n.iter = 30000, n.burnin = 5000, n.thin = 5)
 
-all(as.data.frame(mixture.samplesE3$BUGSoutput$summary)$Rhat < 1.1)
+mixture.summaryE3 = as.data.frame(mixture.samplesE3$BUGSoutput$summary)
+mixture.summaryE3[mixture.summaryE3$Rhat>1.1,]
 
 # logistic
-params <- c('K', 'A', 'U', 'L', 'K_SD', 'A_SD', 'U_SD', 'L_SD', 'Lsubj')
+params <- c('K', 'A', 'U', 'L', 'K_SD', 'A_SD', 'U_SD', 'L_SD', 'Ksubj', 'Asubj', 'Usubj', 'Lsubj')
 
-logistic.samplesE3 <- jags.parallel(data = DATALIST_EXP3, inits = NULL, parameters.to.save = params, model.file = 'models/logisticSP.txt', n.chains = 5, n.iter = 15000, n.burnin = 5000, n.thin = 1)
+logistic.samplesE3 <- jags.parallel(data = DATALIST_EXP3, inits = k_initFunc1, parameters.to.save = params, model.file = 'models/logisticSP.txt', n.chains = 4, n.iter = 105000, n.burnin = 5000, n.thin = 20)
 
-all(as.data.frame(logistic.samplesE3$BUGSoutput$summary)$Rhat < 1.1)
+logistic.summaryE3 = as.data.frame(logistic.samplesE3$BUGSoutput$summary)
+logistic.summaryE3[logistic.summaryE3$Rhat>1.1,]
+
+# Allow u to vary by set size and condition
+params <- c('K', 'A', 'U', 'K_SD', 'A_SD', 'U_SD')
+
+uninf_vu.samplesE3 <- jags.parallel(data = DATALIST_EXP3, inits = NULL, parameters.to.save = params, model.file = "models/uninformedSP_vu.txt", n.chains = 4, n.iter = 10000, n.burnin = 5000, n.thin = 1)
+
+uninf_vu.summaryE3 = as.data.frame(uninf_vu.samplesE3$BUGSoutput$summary)
+uninf_vu.summaryE3[uninf_vu.summaryE3$Rhat>1.1,]
 
 # EXTRACT POSTERIOR --------------------------------------------------------
-source('guessingFunctions.R')
 
 dataM.mcmcE3 <- as.matrix(as.mcmc(dataM.samplesE3))
 inf.mcmcE3 <- as.matrix(as.mcmc(inf.samplesE3))
@@ -86,7 +83,7 @@ uninf.mcmcE3 <- as.matrix(as.mcmc(uninf.samplesE3))
 mixture.mcmcE3 <- as.matrix(as.mcmc(mixture.samplesE3))
 logistic.mcmcE3 <- as.matrix(as.mcmc(logistic.samplesE3))
 
-dataM.postE3 <- logistic(dataM.mcmcE3[,!colnames(dataM.mcmcE3) %in% c('deviance', 'R_SD')])
+dataM.postE3 <- logistic(dataM.mcmcE3[,3:20])
 
 # extract estimated median f,h pairs and HDIs
 fh.estimates.postE3 <- expand.grid(N = c(2,5,8), P = c(0.3,0.5,0.7), 
@@ -140,5 +137,5 @@ logistic.postE3 <- cbind(logistic.mcmcE3[,'K'],
 logistic_o.postE3 <- exp(logistic.mcmcE3[,paste0('Lsubj[', 1:DATALIST_EXP3$S , ']')])
 logistic_o.postE3 <- cbind(apply(logistic_o.postE3, 2, median), t(apply(logistic_o.postE3, 2, HDIofMCMC)))
 
-dir.create('posteriors/')
 save(list = c(ls(pattern = 'samplesE3'), ls(pattern = 'postE3')), file = 'posteriors/posteriorsExp3.RData')
+
